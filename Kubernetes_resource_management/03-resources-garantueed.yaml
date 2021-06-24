@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-waster
+  labels:
+    app: memory-waster
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-waster
+  template:
+    metadata:
+      labels:
+        app: memory-waster
+    spec:
+      containers:
+      - name: memory-demo-ctr
+        image: polinux/stress
+        command: ["/bin/sh"]
+        args: ["-c", "sleep 1; stress --vm 1 --vm-bytes 500M --vm-hang 0"]
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 100m
+          limits:
+            memory: 512Mi
+            cpu: 100m
