@@ -27,7 +27,7 @@ In order to experience the behaviour of resource limits the following setup is e
 $ sudo killall stress
 ```
 
-Eventually cleanup the deployment
+Eventually cleanup the deployment (don' try this now)
 ```bash
 ❯ kubectl delete -f 03-resources-garantueed.yaml
 deployment.apps "memory-waster" deleted
@@ -125,6 +125,7 @@ Deploy the manifest file `01-resources-best-effort.yaml` to create a deployment 
 ```bash
 ❯ kubectl apply -f 01-resources-best-effort.yaml
 deployment.apps/memory-waster created
+
 ❯ kubectl describe pod -l app=memory-waster
 Name:         memory-waster-6b8478554c-gd29b
 Namespace:    default
@@ -148,7 +149,7 @@ Events:
   Normal  Started    87s   kubelet            Started container memory-demo-ctr
 ```
 
-> What is the QoS Class of this pod?
+> Question: What is the QoS Class of this pod?
 
 Check the memory consumption of the pod:
 
@@ -228,7 +229,6 @@ LAST SEEN   TYPE      REASON              OBJECT                                
 0s          Normal    NodeNotReady        node/minikube                         Node minikube status is now: NodeNotReady
 0s          Warning   NodeNotReady        pod/memory-waster-6b8478554c-wkh6d    Node is not ready
 1s          Warning   NodeNotReady        pod/memory-waster-6b8478554c-4mhvx    Node is not ready
-0s          Warning   NodeNotReady        pod/fluent-bit-ckw2s                  Node is not ready
 1s          Warning   NodeNotReady        pod/memory-waster-6b8478554c-97zcx    Node is not ready
 0s          Warning   NodeNotReady        pod/memory-waster-6b8478554c-gd29b    Node is not ready
 46s         Normal    Pulling             pod/memory-waster-6b8478554c-z9h5g    Pulling image "polinux/stress"
@@ -239,9 +239,7 @@ LAST SEEN   TYPE      REASON              OBJECT                                
 45s         Normal    Pulling             pod/memory-waster-6b8478554c-tgqfp    Pulling image "polinux/stress"
 45s         Normal    Pulled              pod/memory-waster-6b8478554c-p5q5v    Successfully pulled image "polinux/stress" in 4.453962809s
 107s        Normal    Created             pod/memory-waster-6b8478554c-p5q5v    Created container memory-demo-ctr
-107s        Normal    Pulled              pod/fluentd-5476d75d9f-g5zbv          Container image "fluent/fluentd-kubernetes-daemonset:v1.12.0-debian-elasticsearch7-1.0" already present on machine
 107s        Normal    Pulled              pod/memory-waster-6b8478554c-9jzc6    Successfully pulled image "polinux/stress" in 5.816763092s
-108s        Normal    Created             pod/fluentd-5476d75d9f-g5zbv          Created container fluentd
 108s        Normal    Created             pod/memory-waster-6b8478554c-9jzc6    Created container memory-demo-ctr
 108s        Normal    Started             pod/memory-waster-6b8478554c-p5q5v    Started container memory-demo-ctr
 ... omitted
@@ -594,3 +592,25 @@ Our application has been crashing for various reasons. This crash was detected b
 
 Please do not try to handle errors as a result of resource shortage in a container. This will mask the events from Kubernetes giving the wrong impression of the status of a pod.
 If things go sour.... Crash! And crash fast. Let Kubernetes deal with it. (At the same time it saves you from writing additional code...)
+
+## Answers
+
+> Question: What is the QoS Class of this pod?
+
+The QoS Class is reported as: BestEffort which is the default if no resource settings are specified.
+
+> Question: Why is the image being pulled multiple times?
+
+The tag of the image is not specified. It is configured as `polinux/stress` which leads kubernetes to assume that it has to pull `polinux/stress:latest`. Because `latest` can change at any moment Kubernetes has no choice but to pull this image every time.
+
+> Why is the cluster suffering from these deployments?
+
+The combined total of memory required by the scheduled pods exceeds what the cluster has available.
+
+> Why is the cluster accepting this amount of pods to be scaled?
+
+Scaling deployments is an declaritive operation. There is not garantuee that this desired state will be achieved.
+
+> Why do we still have OOM Errors?
+
+Looking at the output you'll notice that there is a resource request that is less then the amount of memory required by the pod. The scheduler is using this value to schedule the deployment on a node. Eventually the demand for memory exceeds what has been reserved resulting in OOM kills due to resource shortage on the node.
