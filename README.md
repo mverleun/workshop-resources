@@ -12,10 +12,9 @@ In order to experience the behaviour of resource limits the following setup is e
 - network connectivity to download images
 
 > Create the minikube cluster if you haven't done it yet. Once it is started open a terminal and enter the command `kubectl get events --watch` to receive constant updates on what is happening inside the cluster.
-
 > Minikube is a controller and worker at the same time, unlike production systems. You'll learn soon why they have to be seperated. If your system becomes totally unusable enter the following commands to free up resources, you may have to repeat the `sudo killall stress` command a few times.
 
-```bash
+``` bash
 ❯ minikube ssh
                          _             _
             _         _ ( )           ( )
@@ -28,7 +27,8 @@ $ sudo killall stress
 ```
 
 Eventually cleanup the deployment (don' try this now)
-```bash
+
+``` bash
 ❯ kubectl delete -f 03-resources-garantueed.yaml
 deployment.apps "memory-waster" deleted
 ```
@@ -69,7 +69,7 @@ Before we proceed it is nice to see certain aspects of the current system. Not a
 
 Make sure Minikube is running and notice the current load (commands are entered after the ❯ sign, the rest is output):
 
-```bash
+``` bash
 ❯ kubectl get node
 ... omitted
 Conditions:
@@ -122,7 +122,7 @@ First lets look at a deployment that runs in a Best Effort setting. This means t
 
 Deploy the manifest file `01-resources-best-effort.yaml` to create a deployment that consumes quite some memory (500 M). It's poor in responding. Next display information about the pod:
 
-```bash
+``` bash
 ❯ kubectl apply -f 01-resources-best-effort.yaml
 deployment.apps/memory-waster created
 
@@ -153,7 +153,7 @@ Events:
 
 Check the memory consumption of the pod:
 
-```bash
+``` bash
 ❯ kubectl top pod -l app=memory-waster
 W0624 20:50:24.640026   52234 top_pod.go:140] Using json format to get metrics. Next release will switch to protocol-buffers, switch early by passing --use-protocol-buffers flag
 NAME                             CPU(cores)   MEMORY(bytes)
@@ -167,7 +167,7 @@ minikube   1365m        34%    3106Mi          38%
 
 Time to scale the application and check resource usage again:
 
-```bash
+``` bash
 ❯ kubectl scale deployment memory-waster --replicas 10
 deployment.apps/memory-waster scaled
 
@@ -197,14 +197,14 @@ Did you keep an eye on the terminal with the events?
 
 Scale again and see what happens:
 
-```bash
+``` bash
 ❯ kubectl scale deployment memory-waster --replicas 20
 deployment.apps/memory-waster scaled
 ```
 
 Pretty soon the system is in a lot of pain.... The other terminal shows many errors (In the case of Minikube we have a single node that is both controller and worker).
 
-```
+``` bash
 ❯ kubectl get events --watch
 LAST SEEN   TYPE      REASON              OBJECT                                MESSAGE
 ... omitted
@@ -250,7 +250,7 @@ LAST SEEN   TYPE      REASON              OBJECT                                
 
 Quickly scale down, it might take some time and maybe several attempts:
 
-```bash
+``` bash
 ❯ kubectl scale deployment memory-waster --replicas 1
 deployment.apps/memory-waster scaled
 
@@ -266,22 +266,21 @@ memory-waster-6b8478554c-mzdgd   0/1     Terminating   0          14m
 On a production cluster the controller would be more responsive but the pain on the workers would be the same.
 
 > Why is the cluster suffering from these deployments?
-
 > Why is the cluster accepting this amount of pods to be scaled?
 
 Clean up the deployment:
 
-```bash
+``` bash
 ❯ kubectl delete deployments.apps memory-waster
 deployment.apps "memory-waster" deleted
 ```
 
 ## QoS Class Burstable
 
-Let's repeat some of the steps above with another manifest file. This file is almost the same but has resource settings. 
+Let's repeat some of the steps above with another manifest file. This file is almost the same but has resource settings.
 Both limits and requests are defined for memory and cpu. Let's see if you can spot the differences in what is happening. Keep an eye on the event log as well.
 
-```bash
+``` bash
 ❯ kubectl apply -f 02-resources-burstable.yaml
 deployment.apps/memory-waster configured
 
@@ -317,7 +316,7 @@ Events:
 
 Scale again and see what is happening now...
 
-```bash
+``` bash
 ❯ kubectl scale deployment memory-waster --replicas 10
 
 ❯ kubectl top pod -l app=memory-waster
@@ -372,14 +371,14 @@ A limit on CPU usage does not terminate the pods. It slows them down.
 
 Let's scale up a bit more to consume more memory than available. We have to be patient due to the CPU limits before we see what is happening.
 
-```bash
+``` bash
 ❯ kubectl scale deployment memory-waster --replicas 15
 deployment.apps/memory-waster scaled
 ```
 
 Eventually the system will show OOM Errors again in the event window. Delete this deployment to free the resources:
 
-```bash
+``` bash
 ❯ kubectl delete -f 02-resources-burstable.yaml
 deployment.apps "memory-waster" deleted
 ```
@@ -390,7 +389,7 @@ deployment.apps "memory-waster" deleted
 
 Again we repeat the previous steps with the third manifest file. Have a look at the steps in sequence:
 
-```bash
+``` bash
 ❯ kubectl apply -f 03-resources-garantueed.yaml
 deployment.apps/memory-waster created
 ❯ kubectl scale deployment memory-waster --replicas 10
@@ -437,7 +436,7 @@ deployment.apps/memory-waster scaled
 
 Now something interesting is showing up in the event log:
 
-```bash
+``` bash
 0s          Normal    Scheduled                 pod/memory-waster-77cd759d9f-2rxjx    Successfully assigned default/memory-waster-77cd759d9f-2rxjx to minikube
 0s          Warning   FailedScheduling          pod/memory-waster-77cd759d9f-s5qk7    0/1 nodes are available: 1 Insufficient memory.
 0s          Normal    Scheduled                 pod/memory-waster-77cd759d9f-vzd6t    Successfully assigned default/memory-waster-77cd759d9f-vzd6t to minikube
@@ -472,7 +471,7 @@ As soon as there is an (implicit) resource setting the scheduler will try to ide
 
 Enter the following commands and have a look at what is happening:
 
-```bash
+``` bash
 ❯ kubectl top node
 W0624 22:14:15.829512   53963 top_node.go:119] Using json format to get metrics. Next release will switch to protocol-buffers, switch early by passing --use-protocol-buffers flag
 NAME       CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
@@ -506,7 +505,7 @@ memory-waster-59c86c9647-vfvsr   0/1     Pending   0          97s
 Have a look at the event logging as well. You'll see that we run the same deployment as before only now with a much larger request value for memory. As a result the system is reserving a lot of memory that is not being used which prevents other pods from deploying.
 These pods remain in a pending state for an infinite amount of time.
 
-```bash
+``` bash
 ❯ kubectl describe pod -l app=memory-waster
 ... omitted
 
@@ -525,14 +524,14 @@ As you can see for each pod a reservation of 2G has been made. The actual usage 
 
 ## And the opposite
 
-```bash
+``` bash
 ❯ kubectl apply -f 05-resources-garantueed.yaml
 deployment.apps/memory-waster created
 ```
 
 Watch the events. What is happening now? We can not start a single container!
 
-```bash
+``` bash
 ❯ kubectl describe pod -l app=memory-waster
 Name:         memory-waster-78fdf77ddf-frcg9
 Namespace:    default
@@ -581,7 +580,7 @@ Events:
 
   Let's clean up...
 
- ```bash
+ ``` bash
  ❯ kubectl delete -f 05-resources-garantueed.yaml
 deployment.apps "memory-waster" deleted
 ```
